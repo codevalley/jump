@@ -1,5 +1,9 @@
 # Jump - Ephemeral Share Service
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Rust](https://github.com/rust-lang/rust/workflows/CI/badge.svg)](https://github.com/rust-lang/rust/actions)
+
+
 Jump is a secure and efficient ephemeral sharing service built with Rust. It allows users to share content that automatically expires after a set duration, ensuring data privacy and security.
 
 ## Features

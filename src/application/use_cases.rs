@@ -17,7 +17,10 @@ use crate::domain::{
     payload::{Payload, PayloadError},
     hash_id::HashId,
 };
-use super::dtos::{CreatePayloadRequest, CreatePayloadResponse, GetPayloadResponse};
+use super::{
+    dtos::{CreatePayloadRequest, CreatePayloadResponse, GetPayloadResponse},
+    repository::Repository,
+};
 
 /// Errors that can occur in use cases.
 #[derive(Debug, Error)]
@@ -43,38 +46,10 @@ pub enum UseCaseError {
     DomainError(#[from] PayloadError),
 }
 
-/// Repository trait defining storage operations needed by use cases.
-#[async_trait]
-pub trait Repository: Send + Sync {
-    /// Save a payload to storage
-    async fn save(&self, payload: &Payload) -> Result<(), anyhow::Error>;
-    
-    /// Get a payload by its hash_id
-    async fn get(&self, hash_id: &HashId) -> Result<Option<Payload>, anyhow::Error>;
-    
-    /// Delete a payload by its hash_id
-    async fn delete(&self, hash_id: &HashId) -> Result<(), anyhow::Error>;
-}
-
 /// Use case for creating a new payload.
 #[async_trait]
-pub trait CreatePayloadUseCase {
-    /// Execute the create payload use case.
-    /// 
-    /// # Arguments
-    /// 
-    /// * `request` - The create payload request DTO
-    /// 
-    /// # Returns
-    /// 
-    /// Returns the created payload response or an error if creation failed.
-    /// 
-    /// # Errors
-    /// 
-    /// Returns `UseCaseError` if:
-    /// - Input validation fails
-    /// - Repository operations fail
-    /// - Domain rules are violated
+pub trait CreatePayloadUseCase: Send + Sync {
+    /// Execute the use case.
     async fn execute(
         &self,
         request: CreatePayloadRequest,
@@ -83,23 +58,8 @@ pub trait CreatePayloadUseCase {
 
 /// Use case for retrieving an existing payload.
 #[async_trait]
-pub trait GetPayloadUseCase {
-    /// Execute the get payload use case.
-    /// 
-    /// # Arguments
-    /// 
-    /// * `hash_id` - The unique identifier of the payload to retrieve
-    /// 
-    /// # Returns
-    /// 
-    /// Returns the payload response if found, or an error if retrieval failed.
-    /// 
-    /// # Errors
-    /// 
-    /// Returns `UseCaseError` if:
-    /// - Payload is not found
-    /// - Payload has expired
-    /// - Repository operations fail
+pub trait GetPayloadUseCase: Send + Sync {
+    /// Execute the use case.
     async fn execute(&self, hash_id: String) -> Result<GetPayloadResponse, UseCaseError>;
 }
 
@@ -122,21 +82,22 @@ impl CreatePayloadUseCase for CreatePayloadUseCaseImpl {
         request: CreatePayloadRequest,
     ) -> Result<CreatePayloadResponse, UseCaseError> {
         // Validate request
-        if let Err(errors) = request.validate() {
-            return Err(UseCaseError::ValidationError(errors.to_string()));
-        }
+        request.validate().map_err(|e| UseCaseError::ValidationError(e.to_string()))?;
 
-        // Create domain entity
+        // Create payload
         let payload = Payload::new(
             request.content,
             request.mime_type,
             request.expiry_time,
-        )?;
+        ).map_err(UseCaseError::DomainError)?;
 
-        // Save to repository
-        self.repository.save(&payload).await?;
+        // Save payload
+        self.repository
+            .save(&payload)
+            .await
+            .map_err(UseCaseError::RepositoryError)?;
 
-        // Create response
+        // Return response
         Ok(CreatePayloadResponse {
             hash_id: payload.hash_id().as_string().to_string(),
             content: payload.content().to_string(),
@@ -164,28 +125,34 @@ impl GetPayloadUseCaseImpl {
 #[async_trait]
 impl GetPayloadUseCase for GetPayloadUseCaseImpl {
     async fn execute(&self, hash_id: String) -> Result<GetPayloadResponse, UseCaseError> {
+        // Create HashId from string
+        let hash_id = HashId::from_string(hash_id);
+
         // Get payload from repository
-        let mut payload = self
-            .repository
-            .get(&HashId::from_string(hash_id))
-            .await?
+        let mut payload = self.repository
+            .get(&hash_id)
+            .await
+            .map_err(UseCaseError::RepositoryError)?
             .ok_or(UseCaseError::NotFound)?;
 
-        // Check if expired
+        // Check if payload has expired
         if payload.is_expired() {
             // Delete expired payload
             self.repository
-                .delete(payload.hash_id())
+                .delete(&hash_id)
                 .await
                 .map_err(UseCaseError::RepositoryError)?;
             return Err(UseCaseError::Expired);
         }
 
-        // Mark as viewed
+        // Mark payload as viewed
         payload.mark_viewed();
-        self.repository.save(&payload).await?;
+        self.repository
+            .save(&payload)
+            .await
+            .map_err(UseCaseError::RepositoryError)?;
 
-        // Create response
+        // Return response
         Ok(GetPayloadResponse {
             hash_id: payload.hash_id().as_string().to_string(),
             content: payload.content().to_string(),
@@ -201,12 +168,12 @@ impl GetPayloadUseCase for GetPayloadUseCaseImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use mockall::predicate::*;
+    use chrono::{Duration, Utc};
     use mockall::mock;
+    use mockall::predicate::*;
 
     mock! {
         Repository {}
-
         #[async_trait]
         impl Repository for Repository {
             async fn save(&self, payload: &Payload) -> Result<(), anyhow::Error>;
@@ -217,19 +184,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_payload_success() {
-        let mut repository = MockRepository::new();
-        
-        // Setup mock repository to expect save call
-        repository
-            .expect_save()
+        let mut mock = MockRepository::new();
+        mock.expect_save()
+            .with(always())
+            .times(1)
             .returning(|_| Ok(()));
 
-        let use_case = CreatePayloadUseCaseImpl::new(Arc::new(repository));
-
+        let use_case = CreatePayloadUseCaseImpl::new(Arc::new(mock));
         let request = CreatePayloadRequest {
-            content: "Test content".to_string(),
+            content: "test".to_string(),
             mime_type: Some("text/plain".to_string()),
-            expiry_time: None,
+            expiry_time: Some(Utc::now() + Duration::hours(1)),
         };
 
         let result = use_case.execute(request).await;
@@ -238,9 +203,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_payload_validation_error() {
-        let repository = Arc::new(MockRepository::new());
-        let use_case = CreatePayloadUseCaseImpl::new(repository);
-
+        let mock = MockRepository::new();
+        let use_case = CreatePayloadUseCaseImpl::new(Arc::new(mock));
         let request = CreatePayloadRequest {
             content: "".to_string(), // Empty content should fail validation
             mime_type: None,
@@ -253,38 +217,41 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_payload_success() {
-        let mut repository = MockRepository::new();
+        let mut mock = MockRepository::new();
+        let payload = Payload::new(
+            "test".to_string(),
+            Some("text/plain".to_string()),
+            Some(Utc::now() + Duration::hours(1)),
+        ).unwrap();
+        let hash_id = payload.hash_id().clone();
+
+        mock.expect_get()
+            .with(eq(hash_id.clone()))
+            .times(1)
+            .returning(move |_| Ok(Some(payload.clone())));
         
-        // Setup mock repository
-        repository
-            .expect_get()
-            .returning(|_| Ok(Some(Payload::new(
-                "Test content".to_string(),
-                None,
-                None,
-            ).unwrap())));
-        
-        repository
-            .expect_save()
+        // We also need to expect save since the use case marks the payload as viewed
+        mock.expect_save()
+            .times(1)
             .returning(|_| Ok(()));
 
-        let use_case = GetPayloadUseCaseImpl::new(Arc::new(repository));
-        let result = use_case.execute("test-hash".to_string()).await;
-        
+        let use_case = GetPayloadUseCaseImpl::new(Arc::new(mock));
+        let result = use_case.execute(hash_id.as_string().to_string()).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_get_payload_not_found() {
-        let mut repository = MockRepository::new();
-        
-        repository
-            .expect_get()
+        let mut mock = MockRepository::new();
+        let hash_id = HashId::new();
+
+        mock.expect_get()
+            .with(eq(hash_id.clone()))
+            .times(1)
             .returning(|_| Ok(None));
 
-        let use_case = GetPayloadUseCaseImpl::new(Arc::new(repository));
-        let result = use_case.execute("nonexistent".to_string()).await;
-        
+        let use_case = GetPayloadUseCaseImpl::new(Arc::new(mock));
+        let result = use_case.execute(hash_id.as_string().to_string()).await;
         assert!(matches!(result, Err(UseCaseError::NotFound)));
     }
 }

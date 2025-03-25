@@ -16,7 +16,7 @@
 
 ## Tasks
 
-### Phase 1: Project Setup and Core Domain
+### Phase 1: Project Setup and Core Domain 
 - [x] Project initialization
   - [x] Create new Rust project
   - [x] Directory structure setup
@@ -32,7 +32,7 @@
   - [x] HashId value object with docs
   - [x] MimeType handling with docs
 
-### Phase 2: Application Layer
+### Phase 2: Application Layer 
 - [x] DTOs implementation
   - [x] CreatePayloadRequest/Response with docs
   - [x] GetPayloadResponse with docs
@@ -40,26 +40,26 @@
 - [x] Use cases
   - [x] CreatePayload with docs
   - [x] GetPayload with docs
-- [ ] Rate limiting
-  - [ ] Redis-based rate limiter implementation
-  - [ ] Rate limit middleware
+- [x] Rate limiting
+  - [x] Redis-based rate limiter implementation
+  - [x] Rate limit middleware
 
-### Phase 3: Infrastructure Layer
+### Phase 3: Infrastructure Layer 
 - [ ] Logging setup
   - [ ] tracing configuration
   - [ ] Request logging middleware
   - [ ] Error logging
-- [ ] Redis repository implementation
-  - [ ] Connection pool
-  - [ ] CRUD operations
-  - [ ] Expiry handling
+- [x] Redis repository implementation
+  - [x] Connection pool
+  - [x] CRUD operations
+  - [x] Expiry handling
 - [ ] HTTP API endpoints
   - [ ] API versioning structure (v1)
   - [ ] Payload size validation
   - [ ] Routes and handlers
   - [ ] Error handling middleware
 
-### Phase 4: Testing and Documentation
+### Phase 4: Testing and Documentation 
 - [ ] Unit tests
   - [ ] Domain layer tests
   - [ ] Use case tests
@@ -89,4 +89,4 @@
   - [ ] Logging configuration
 
 ## Current Status
-🚀 Application Layer Complete - Moving to Infrastructure Layer
+🚀 Infrastructure Layer in Progress - Redis repository implementation complete
