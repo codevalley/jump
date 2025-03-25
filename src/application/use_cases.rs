@@ -9,7 +9,6 @@
 //! They encapsulate all business rules and coordinate between different parts of the system.
 
 use async_trait::async_trait;
-use chrono::Utc;
 use std::sync::Arc;
 use thiserror::Error;
 use validator::Validate;
@@ -218,8 +217,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_payload_success() {
-        let repository = Arc::new(MockRepository::new());
-        let use_case = CreatePayloadUseCaseImpl::new(repository);
+        let mut repository = MockRepository::new();
+        
+        // Setup mock repository to expect save call
+        repository
+            .expect_save()
+            .returning(|_| Ok(()));
+
+        let use_case = CreatePayloadUseCaseImpl::new(Arc::new(repository));
 
         let request = CreatePayloadRequest {
             content: "Test content".to_string(),

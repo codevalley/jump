@@ -9,8 +9,15 @@
 //! from the external interface.
 
 use chrono::{DateTime, Utc};
+use lazy_static::lazy_static;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+
+lazy_static! {
+    /// Regular expression for validating MIME types
+    static ref MIME_TYPE_REGEX: Regex = Regex::new(r"^[a-z]+/[a-z0-9.+-]+$").unwrap();
+}
 
 /// Request DTO for creating a new payload.
 /// 
@@ -110,9 +117,6 @@ pub struct ErrorResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub retry_after: Option<i32>,
 }
-
-/// Regular expression for validating MIME types
-static MIME_TYPE_REGEX: &str = r"^[a-z]+/[a-z0-9.+-]+$";
 
 #[cfg(test)]
 mod tests {
