@@ -26,38 +26,38 @@
   - [x] redis for storage
   - [x] tracing for logging
   - [x] serde for serialization
-- [ ] Domain layer implementation
-  - [ ] Documentation standards setup
-  - [ ] Payload entity with docs
-  - [ ] HashId value object with docs
-  - [ ] MimeType handling with docs
+- [x] Domain layer implementation
+  - [x] Documentation standards setup
+  - [x] Payload entity with docs
+  - [x] HashId value object with docs
+  - [x] MimeType handling with docs
 
 ### Phase 2: Application Layer
-- [ ] DTOs implementation
-  - [ ] CreatePayloadRequest/Response with docs
-  - [ ] GetPayloadResponse with docs
-  - [ ] Error responses with docs
-- [ ] Use cases
-  - [ ] CreatePayload with docs
-  - [ ] GetPayload with docs
+- [x] DTOs implementation
+  - [x] CreatePayloadRequest/Response with docs
+  - [x] GetPayloadResponse with docs
+  - [x] Error responses with docs
+- [x] Use cases
+  - [x] CreatePayload with docs
+  - [x] GetPayload with docs
 - [ ] Rate limiting
-  - [ ] Redis-based rate limiter implementation with docs
-  - [ ] Rate limit middleware with docs
+  - [ ] Redis-based rate limiter implementation
+  - [ ] Rate limit middleware
 
 ### Phase 3: Infrastructure Layer
 - [ ] Logging setup
-  - [ ] tracing configuration with docs
-  - [ ] Request logging middleware with docs
-  - [ ] Error logging with docs
+  - [ ] tracing configuration
+  - [ ] Request logging middleware
+  - [ ] Error logging
 - [ ] Redis repository implementation
-  - [ ] Connection pool with docs
-  - [ ] CRUD operations with docs
-  - [ ] Expiry handling with docs
+  - [ ] Connection pool
+  - [ ] CRUD operations
+  - [ ] Expiry handling
 - [ ] HTTP API endpoints
   - [ ] API versioning structure (v1)
-  - [ ] Payload size validation with docs
-  - [ ] Routes and handlers with docs
-  - [ ] Error handling middleware with docs
+  - [ ] Payload size validation
+  - [ ] Routes and handlers
+  - [ ] Error handling middleware
 
 ### Phase 4: Testing and Documentation
 - [ ] Unit tests
@@ -89,4 +89,4 @@
   - [ ] Logging configuration
 
 ## Current Status
-🚀 Project Setup Complete - Starting Domain Layer Implementation with Documentation Standards
+🚀 Application Layer Complete - Moving to Infrastructure Layer
