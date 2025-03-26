@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jump API Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .response {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow: auto;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Jump API Tester</h1>
+    <div class="container">
+        <div class="card">
+            <h2>Health Check</h2>
+            <button id="healthCheck">Test Health Endpoint</button>
+            <h3>Response:</h3>
+            <div id="healthResponse" class="response"></div>
+        </div>
+
+        <div class="card">
+            <h2>Create Payload</h2>
+            <div>
+                <label for="content">Content:</label>
+                <textarea id="content" rows="4">Test payload content</textarea>
+            </div>
+            <div>
+                <label for="mimeType">MIME Type:</label>
+                <input type="text" id="mimeType" value="text/plain">
+            </div>
+            <button id="createPayload">Create Payload</button>
+            <h3>Response:</h3>
+            <div id="createResponse" class="response"></div>
+        </div>
+
+        <div class="card">
+            <h2>Get Payload</h2>
+            <div>
+                <label for="payloadId">Payload ID:</label>
+                <input type="text" id="payloadId">
+            </div>
+            <button id="getPayload">Get Payload</button>
+            <h3>Response:</h3>
+            <div id="getResponse" class="response"></div>
+        </div>
+
+        <div class="card">
+            <h2>Delete Payload</h2>
+            <div>
+                <label for="deletePayloadId">Payload ID:</label>
+                <input type="text" id="deletePayloadId">
+            </div>
+            <button id="deletePayload">Delete Payload</button>
+            <h3>Response:</h3>
+            <div id="deleteResponse" class="response"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8080/api';
+
+        // Health Check
+        document.getElementById('healthCheck').addEventListener('click', async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                document.getElementById('healthResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('healthResponse').textContent = `Error: ${error.message}`;
+            }
+        });
+
+        // Create Payload
+        document.getElementById('createPayload').addEventListener('click', async () => {
+            try {
+                const content = document.getElementById('content').value;
+                const mimeType = document.getElementById('mimeType').value;
+                
+                const response = await fetch(`${API_BASE_URL}/v1/payloads`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content,
+                        mime_type: mimeType
+                    })
+                });
+                
+                const data = await response.json();
+                document.getElementById('createResponse').textContent = JSON.stringify(data, null, 2);
+                
+                // Auto-fill the payload ID for get and delete
+                if (data.id) {
+                    document.getElementById('payloadId').value = data.id;
+                    document.getElementById('deletePayloadId').value = data.id;
+                }
+            } catch (error) {
+                document.getElementById('createResponse').textContent = `Error: ${error.message}`;
+            }
+        });
+
+        // Get Payload
+        document.getElementById('getPayload').addEventListener('click', async () => {
+            try {
+                const payloadId = document.getElementById('payloadId').value;
+                if (!payloadId) {
+                    document.getElementById('getResponse').textContent = 'Error: Please enter a payload ID';
+                    return;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/v1/payloads/${payloadId}`);
+                const data = await response.json();
+                document.getElementById('getResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('getResponse').textContent = `Error: ${error.message}`;
+            }
+        });
+
+        // Delete Payload
+        document.getElementById('deletePayload').addEventListener('click', async () => {
+            try {
+                const payloadId = document.getElementById('deletePayloadId').value;
+                if (!payloadId) {
+                    document.getElementById('deleteResponse').textContent = 'Error: Please enter a payload ID';
+                    return;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/v1/payloads/${payloadId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                document.getElementById('deleteResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('deleteResponse').textContent = `Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

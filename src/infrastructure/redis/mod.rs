@@ -77,6 +77,21 @@ impl RedisRepository {
     fn payload_key(hash_id: &HashId) -> String {
         format!("payload:{}", hash_id.as_string())
     }
+    
+    /// Disable the stop-writes-on-bgsave-error setting in Redis
+    /// This is useful for development environments where we don't care about data persistence
+    pub async fn disable_stop_writes_on_bgsave_error(&self) -> Result<(), RedisError> {
+        let mut conn = self.get_conn().await?;
+        redis::cmd("CONFIG")
+            .arg("SET")
+            .arg("stop-writes-on-bgsave-error")
+            .arg("no")
+            .query_async(&mut conn)
+            .await
+            .map_err(|e| RedisError::Operation(e.to_string()))?;
+        
+        Ok(())
+    }
 }
 
 #[async_trait]

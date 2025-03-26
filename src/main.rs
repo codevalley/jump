@@ -4,7 +4,7 @@ use std::sync::Arc;
 use tracing::info;
 
 use jump::{
-    api::middleware::{ErrorHandlerMiddleware, RateLimitMiddleware, configure_json_error_handling},
+    api::{self, middleware::{ErrorHandlerMiddleware, RateLimitMiddleware, configure_json_error_handling}},
     application::{
         repository::Repository,
         use_cases::{
@@ -37,6 +37,14 @@ async fn main() -> std::io::Result<()> {
             panic!("Failed to connect to Redis: {}", e);
         }
     };
+    
+    // Disable Redis persistence error checking for development
+    if let Err(e) = redis_repo.disable_stop_writes_on_bgsave_error().await {
+        info!("Warning: Could not disable Redis persistence error checking: {}", e);
+        info!("Some write operations may fail if Redis cannot persist to disk");
+    } else {
+        info!("Disabled Redis persistence error checking for development");
+    }
     
     // Create repository
     let repository: Arc<dyn Repository> = Arc::new(redis_repo.clone());
@@ -71,9 +79,10 @@ async fn main() -> std::io::Result<()> {
             // Configure JSON handling
             .app_data(configure_json_error_handling())
             // Add application state
-            .app_data(web::Data::from(create_payload_use_case.clone()))
-            .app_data(web::Data::from(get_payload_use_case.clone()))
-            // TODO: Add routes
+            .app_data(web::Data::new(create_payload_use_case.clone()))
+            .app_data(web::Data::new(get_payload_use_case.clone()))
+            // Add API routes
+            .configure(api::configure())
     })
     .bind("127.0.0.1:8080")?
     .run()
