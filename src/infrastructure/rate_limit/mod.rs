@@ -68,6 +68,7 @@ pub trait RateLimiter: Send + Sync {
 }
 
 /// Redis-based rate limiter implementation using sliding window algorithm
+#[derive(Clone)]
 pub struct RedisRateLimiter {
     redis: RedisRepository,
     config: RateLimitConfig,
