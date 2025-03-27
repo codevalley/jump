@@ -188,8 +188,23 @@ impl DeletePayloadUseCaseImpl {
 impl DeletePayloadUseCase for DeletePayloadUseCaseImpl {
     async fn delete(&self, id: &str) -> Result<(), UseCaseError> {
         let hash_id = HashId::from_string(id.to_string());
-        self.repository.delete(&hash_id).await
-            .map_err(|e| UseCaseError::RepositoryError(e))
+        
+        // First check if the payload exists
+        match self.repository.get(&hash_id).await {
+            Ok(Some(_)) => {
+                // Payload exists, proceed with deletion
+                self.repository.delete(&hash_id).await
+                    .map_err(|e| UseCaseError::RepositoryError(e))
+            }
+            Ok(None) => {
+                // Payload not found
+                Err(UseCaseError::RepositoryError(anyhow::anyhow!("Payload not found")))
+            }
+            Err(e) => {
+                // Repository error
+                Err(UseCaseError::RepositoryError(e))
+            }
+        }
     }
 }
 

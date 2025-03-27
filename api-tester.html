@@ -53,6 +53,12 @@
         label {
             font-weight: bold;
         }
+        .success {
+            color: #4CAF50;
+        }
+        .error {
+            color: #f44336;
+        }
     </style>
 </head>
 <body>
@@ -138,9 +144,9 @@
                 document.getElementById('createResponse').textContent = JSON.stringify(data, null, 2);
                 
                 // Auto-fill the payload ID for get and delete
-                if (data.id) {
-                    document.getElementById('payloadId').value = data.id;
-                    document.getElementById('deletePayloadId').value = data.id;
+                if (data.hash_id) {
+                    document.getElementById('payloadId').value = data.hash_id;
+                    document.getElementById('deletePayloadId').value = data.hash_id;
                 }
             } catch (error) {
                 document.getElementById('createResponse').textContent = `Error: ${error.message}`;
@@ -176,11 +182,15 @@
                 const response = await fetch(`${API_BASE_URL}/v1/payloads/${payloadId}`, {
                     method: 'DELETE'
                 });
-                
-                const data = await response.json();
-                document.getElementById('deleteResponse').textContent = JSON.stringify(data, null, 2);
+
+                if (response.status === 204) {
+                    document.getElementById('deleteResponse').innerHTML = '<span class="success">Payload deleted successfully</span>';
+                } else {
+                    const text = await response.text();
+                    document.getElementById('deleteResponse').innerHTML = `<span class="error">Error (${response.status}):</span><br><pre>${text}</pre>`;
+                }
             } catch (error) {
-                document.getElementById('deleteResponse').textContent = `Error: ${error.message}`;
+                document.getElementById('deleteResponse').innerHTML = `<span class="error">Error: ${error.message}</span>`;
             }
         });
     </script>

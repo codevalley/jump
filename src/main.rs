@@ -10,6 +10,7 @@ use jump::{
         use_cases::{
             CreatePayloadUseCaseImpl,
             GetPayloadUseCaseImpl,
+            DeletePayloadUseCaseImpl,
         },
     },
     infrastructure::{
@@ -52,6 +53,7 @@ async fn main() -> std::io::Result<()> {
     // Create use cases
     let create_payload_use_case = Arc::new(CreatePayloadUseCaseImpl::new(repository.clone()));
     let get_payload_use_case = Arc::new(GetPayloadUseCaseImpl::new(repository.clone()));
+    let delete_payload_use_case = Arc::new(DeletePayloadUseCaseImpl::new(repository.clone()));
     
     // Configure rate limiter
     let rate_limit_config = RateLimitConfig {
@@ -81,6 +83,7 @@ async fn main() -> std::io::Result<()> {
             // Add application state
             .app_data(web::Data::new(create_payload_use_case.clone()))
             .app_data(web::Data::new(get_payload_use_case.clone()))
+            .app_data(web::Data::new(delete_payload_use_case.clone()))
             // Add API routes
             .configure(api::configure())
     })

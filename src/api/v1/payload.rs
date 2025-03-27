@@ -189,16 +189,25 @@ pub async fn delete_payload(
             HttpResponse::NoContent().finish()
         }
         Err(e) => {
-            error!(error = %e, "Failed to delete payload");
+            error!(error = %e, error_type = ?std::any::type_name_of_val(&e), "Failed to delete payload");
             match e {
-                UseCaseError::RepositoryError(_) => {
-                    HttpResponse::NotFound().json(serde_json::json!({
-                        "error": "Payload not found"
-                    }))
+                UseCaseError::RepositoryError(e) => {
+                    error!(repo_error = %e, "Repository error details");
+                    // Check if the error message indicates the payload was not found
+                    if e.to_string().contains("not found") {
+                        HttpResponse::NotFound().json(serde_json::json!({
+                            "error": "Payload not found"
+                        }))
+                    } else {
+                        HttpResponse::InternalServerError().json(serde_json::json!({
+                            "error": format!("Failed to delete payload: {}", e)
+                        }))
+                    }
                 }
                 _ => {
+                    error!(other_error = %e, "Unexpected error type");
                     HttpResponse::InternalServerError().json(serde_json::json!({
-                        "error": "An unexpected error occurred"
+                        "error": format!("An unexpected error occurred: {}", e)
                     }))
                 }
             }

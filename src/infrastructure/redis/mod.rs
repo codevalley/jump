@@ -8,6 +8,7 @@ use redis;
 use serde_json;
 use thiserror::Error;
 use async_trait::async_trait;
+use tracing::{debug, error, info};
 
 use crate::{
     application::repository::Repository,
@@ -124,12 +125,14 @@ impl Repository for RedisRepository {
 
         let json: Option<String> = redis::cmd("GET")
             .arg(&key)
-            .query_async(&mut conn)
-            .await?;
+            .query_async::<_, Option<String>>(&mut conn)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to get payload: {}", e))?;
 
         match json {
             Some(json) => {
-                let payload: Payload = serde_json::from_str(&json)?;
+                let payload: Payload = serde_json::from_str(&json)
+                    .map_err(|e| anyhow::anyhow!("Failed to deserialize payload: {}", e))?;
                 Ok(Some(payload))
             }
             None => Ok(None),
@@ -137,15 +140,45 @@ impl Repository for RedisRepository {
     }
 
     async fn delete(&self, hash_id: &HashId) -> Result<(), anyhow::Error> {
-        let mut conn = self.get_conn().await?;
+        let mut conn = match self.get_conn().await {
+            Ok(conn) => conn,
+            Err(e) => {
+                error!(error = %e, "Failed to get Redis connection");
+                return Err(anyhow::anyhow!("Failed to get Redis connection: {}", e));
+            }
+        };
         let key = Self::payload_key(hash_id);
         
-        let _: () = redis::cmd("DEL")
+        // Check if key exists first
+        let exists: bool = match redis::cmd("EXISTS")
             .arg(&key)
-            .query_async(&mut conn)
-            .await?;
+            .query_async::<_, bool>(&mut conn)
+            .await {
+                Ok(exists) => exists,
+                Err(e) => {
+                    error!(error = %e, key = %key, "Failed to check if key exists in Redis");
+                    return Err(anyhow::anyhow!("Failed to check if payload exists: {}", e));
+                }
+            };
 
-        Ok(())
+        if !exists {
+            debug!(key = %key, "Key not found in Redis");
+            return Err(anyhow::anyhow!("Payload not found"));
+        }
+        
+        match redis::cmd("DEL")
+            .arg(&key)
+            .query_async::<_, ()>(&mut conn)
+            .await {
+                Ok(_) => {
+                    info!(key = %key, "Successfully deleted key from Redis");
+                    Ok(())
+                }
+                Err(e) => {
+                    error!(error = %e, key = %key, "Failed to delete key from Redis");
+                    Err(anyhow::anyhow!("Failed to delete payload: {}", e))
+                }
+            }
     }
 }
 
