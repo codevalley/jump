@@ -1,15 +1,38 @@
 # Jump Service
 
-A high-performance, Redis-backed temporary payload storage service with rate limiting.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Rust](https://github.com/rust-lang/rust/workflows/CI/badge.svg)](https://github.com/rust-lang/rust/actions)
 
-## Features
+A high-performance, Redis-backed temporary payload storage service with built-in rate limiting and automatic expiration. Built with Rust for optimal performance and reliability.
 
-- Create, retrieve, and delete temporary payloads
-- Built-in rate limiting
-- Automatic payload expiration
-- High performance with Redis backend
-- Comprehensive logging
-- Detailed error handling
+<p align="center">
+  <img src="docs/assets/jump-logo.png" alt="Jump Service Logo" width="200"/>
+</p>
+
+## What is Jump?
+
+Jump is a modern solution to ephemeral data storage and sharing. It provides a secure, fast, and reliable way to store temporary data that automatically expires after a set duration. Whether you need to share sensitive information, temporary tokens, or any other short-lived data, Jump makes it simple and secure.
+
+### Why Jump?
+
+- **High Performance**: Built with Rust for optimal speed and efficiency
+- **Secure**: Data automatically expires and is never permanently stored
+- **Lightning Fast**: Redis-backed storage for sub-millisecond access
+- **Rate Limited**: Built-in protection against abuse
+- **Type Safe**: Strict MIME type validation for content
+- **RESTful API**: Simple and intuitive API design
+
+## How Does It Work?
+
+1. **Create**: Send your data with an optional expiry time
+2. **Share**: Get a unique hash ID for your data
+3. **Access**: Use the hash ID to retrieve the data
+4. **Auto-Expire**: Data is automatically deleted after expiry
+
+Jump is:
+- **Ephemeral**: All data automatically expires
+- **Fast**: Redis-backed for high performance
+- **Efficient**: Optimized for minimal resource usage
 
 ## Quick Start
 
@@ -73,11 +96,9 @@ GET /api/v1/payloads/{hash_id}
 DELETE /api/v1/payloads/{hash_id}
 ```
 
-For detailed API documentation, see [API.md](docs/API.md).
+[View Full API Documentation](docs/API.md)
 
 ## Configuration
-
-The service can be configured using environment variables:
 
 ```bash
 # Server configuration
@@ -96,6 +117,22 @@ RATE_LIMIT_WINDOW=60  # seconds
 # Payload limits
 MAX_PAYLOAD_SIZE=10485760  # 10MB
 DEFAULT_EXPIRY=86400      # 24 hours
+```
+
+## Project Structure
+
+```
+src/
+├── api/            # HTTP API layer
+│   ├── middleware/ # Rate limiting, logging
+│   └── v1/        # API version 1 endpoints
+├── application/    # Business logic
+│   ├── use_cases/ # Core operations
+│   └── dto/       # Data transfer objects
+├── domain/        # Core domain models
+├── infrastructure/ # External services
+│   └── redis/     # Redis implementation
+└── main.rs        # Application entry point
 ```
 
 ## Development
@@ -124,22 +161,6 @@ The service uses `tracing` for structured logging. Log levels can be configured 
 
 ```bash
 RUST_LOG=debug cargo run
-```
-
-## Project Structure
-
-```
-src/
-├── api/            # HTTP API layer
-│   ├── middleware/ # Rate limiting, logging
-│   └── v1/        # API version 1 endpoints
-├── application/    # Business logic
-│   ├── use_cases/ # Core operations
-│   └── dto/       # Data transfer objects
-├── domain/        # Core domain models
-├── infrastructure/ # External services
-│   └── redis/     # Redis implementation
-└── main.rs        # Application entry point
 ```
 
 ## Contributing
