@@ -1,0 +1,201 @@
+openapi: 3.0.3
+info:
+  title: Jump Service API
+  description: A high-performance, Redis-backed temporary payload storage service with rate limiting
+  version: 1.0.0
+  contact:
+    name: CodeValley
+    url: https://github.com/codevalley/jump
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/v1/payloads:
+    post:
+      summary: Create a new payload
+      operationId: createPayload
+      tags:
+        - Payloads
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePayloadRequest'
+      responses:
+        '201':
+          description: Payload created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatePayloadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/payloads/{hash_id}:
+    parameters:
+      - $ref: '#/components/parameters/HashId'
+    
+    get:
+      summary: Get a payload by hash ID
+      operationId: getPayload
+      tags:
+        - Payloads
+      responses:
+        '200':
+          description: Payload retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPayloadResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    delete:
+      summary: Delete a payload by hash ID
+      operationId: deletePayload
+      tags:
+        - Payloads
+      responses:
+        '204':
+          description: Payload deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    HashId:
+      name: hash_id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Unique identifier of the payload
+
+  schemas:
+    CreatePayloadRequest:
+      type: object
+      required:
+        - content
+        - mime_type
+      properties:
+        content:
+          type: string
+          description: Content to store
+        mime_type:
+          type: string
+          description: MIME type of the content
+        expiry_time:
+          type: string
+          format: date-time
+          description: When the content should expire (ISO 8601)
+
+    CreatePayloadResponse:
+      type: object
+      required:
+        - hash_id
+        - expiry_time
+      properties:
+        hash_id:
+          type: string
+          description: Unique identifier for the payload
+        expiry_time:
+          type: string
+          format: date-time
+          description: When the content will expire
+
+    GetPayloadResponse:
+      type: object
+      required:
+        - content
+        - mime_type
+        - expiry_time
+      properties:
+        content:
+          type: string
+          description: The stored content
+        mime_type:
+          type: string
+          description: MIME type of the content
+        expiry_time:
+          type: string
+          format: date-time
+          description: When the content will expire
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    PayloadTooLarge:
+      description: Payload size exceeds limit
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Maximum requests per window
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Remaining requests in current window
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Time when the rate limit resets (Unix timestamp)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+tags:
+  - name: Payloads
+    description: Operations for managing temporary payloads
