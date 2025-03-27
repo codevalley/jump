@@ -63,6 +63,13 @@ pub trait GetPayloadUseCase: Send + Sync {
     async fn execute(&self, hash_id: String) -> Result<GetPayloadResponse, UseCaseError>;
 }
 
+/// Use case for deleting an existing payload.
+#[async_trait]
+pub trait DeletePayloadUseCase: Send + Sync {
+    /// Execute the use case.
+    async fn delete(&self, id: &str) -> Result<(), UseCaseError>;
+}
+
 /// Implementation of the create payload use case.
 pub struct CreatePayloadUseCaseImpl {
     repository: Arc<dyn Repository>,
@@ -162,6 +169,27 @@ impl GetPayloadUseCase for GetPayloadUseCaseImpl {
             viewed_at: payload.viewed_at(),
             expiry_time: payload.expiry_time(),
         })
+    }
+}
+
+/// Implementation of the delete payload use case.
+#[derive(Clone)]
+pub struct DeletePayloadUseCaseImpl {
+    repository: Arc<dyn Repository>,
+}
+
+impl DeletePayloadUseCaseImpl {
+    pub fn new(repository: Arc<dyn Repository>) -> Self {
+        Self { repository }
+    }
+}
+
+#[async_trait]
+impl DeletePayloadUseCase for DeletePayloadUseCaseImpl {
+    async fn delete(&self, id: &str) -> Result<(), UseCaseError> {
+        let hash_id = HashId::from_string(id.to_string());
+        self.repository.delete(&hash_id).await
+            .map_err(|e| UseCaseError::RepositoryError(e))
     }
 }
 

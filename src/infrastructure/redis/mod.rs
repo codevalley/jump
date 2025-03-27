@@ -82,11 +82,11 @@ impl RedisRepository {
     /// This is useful for development environments where we don't care about data persistence
     pub async fn disable_stop_writes_on_bgsave_error(&self) -> Result<(), RedisError> {
         let mut conn = self.get_conn().await?;
-        redis::cmd("CONFIG")
+        let _: () = redis::cmd("CONFIG")
             .arg("SET")
             .arg("stop-writes-on-bgsave-error")
             .arg("no")
-            .query_async(&mut conn)
+            .query_async::<_, ()>(&mut conn)
             .await
             .map_err(|e| RedisError::Operation(e.to_string()))?;
         

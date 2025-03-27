@@ -13,3 +13,6 @@ pub mod logging;
 pub use redis::RedisRepository;
 pub use rate_limit::{RateLimiter, RedisRateLimiter, RateLimitConfig, RateLimitError};
 pub use logging::{LoggingConfig, init_logging, RequestLogger};
+
+#[cfg(test)]
+pub mod tests;

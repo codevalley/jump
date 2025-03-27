@@ -13,8 +13,8 @@ use crate::{
     application::{
         dtos::CreatePayloadRequest,
         use_cases::{
-            CreatePayloadUseCaseImpl, GetPayloadUseCaseImpl,
-            CreatePayloadUseCase, GetPayloadUseCase,
+            CreatePayloadUseCaseImpl, GetPayloadUseCaseImpl, DeletePayloadUseCaseImpl,
+            CreatePayloadUseCase, GetPayloadUseCase, DeletePayloadUseCase,
             UseCaseError,
         },
     },
@@ -39,7 +39,7 @@ const MAX_PAYLOAD_SIZE: usize = 10 * 1024 * 1024;
 ///
 /// ```json
 /// {
-///     "id": "unique-hash-id",
+///     "hash_id": "unique-hash-id",
 ///     "expires_at": "2023-01-01T00:00:00Z"
 /// }
 /// ```
@@ -62,7 +62,7 @@ pub async fn create_payload(
             payload_size = %payload.content.len(),
             "Payload too large, maximum size is {} bytes", MAX_PAYLOAD_SIZE
         );
-        return HttpResponse::PayloadTooLarge().json(serde_json::json!({
+        return HttpResponse::BadRequest().json(serde_json::json!({
             "error": format!("Payload too large, maximum size is {} bytes", MAX_PAYLOAD_SIZE)
         }));
     }
@@ -75,7 +75,7 @@ pub async fn create_payload(
                 "Payload created successfully"
             );
             HttpResponse::Created().json(serde_json::json!({
-                "id": response.hash_id,
+                "hash_id": response.hash_id,
                 "expires_at": response.expiry_time
             }))
         }
@@ -173,18 +173,35 @@ pub async fn get_payload(
 /// This endpoint deletes a payload by its ID.
 #[tracing::instrument(
     name = "Delete payload",
-    skip(_get_payload_use_case),
+    skip(delete_payload_use_case),
     fields(hash_id = %id)
 )]
 pub async fn delete_payload(
-    _get_payload_use_case: Data<Arc<GetPayloadUseCaseImpl>>,
+    delete_payload_use_case: Data<Arc<DeletePayloadUseCaseImpl>>,
     id: Path<String>,
 ) -> impl Responder {
     info!("Processing delete payload request");
     
-    // For now, we'll just return a 501 Not Implemented
-    // This will be implemented in a future update
-    HttpResponse::NotImplemented().json(serde_json::json!({
-        "error": "Delete functionality not yet implemented"
-    }))
+    // Delete the payload
+    match delete_payload_use_case.delete(&id).await {
+        Ok(_) => {
+            info!("Payload deleted successfully");
+            HttpResponse::NoContent().finish()
+        }
+        Err(e) => {
+            error!(error = %e, "Failed to delete payload");
+            match e {
+                UseCaseError::RepositoryError(_) => {
+                    HttpResponse::NotFound().json(serde_json::json!({
+                        "error": "Payload not found"
+                    }))
+                }
+                _ => {
+                    HttpResponse::InternalServerError().json(serde_json::json!({
+                        "error": "An unexpected error occurred"
+                    }))
+                }
+            }
+        }
+    }
 }
